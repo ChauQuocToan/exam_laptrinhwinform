@@ -1,0 +1,10 @@
+D:\QLBH_Chauquoctoan\bin\Debug\QLBH_Chauquoctoan.exe.config
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.csprojResolveAssemblyReference.cache
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.Properties.Resources.resources
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.csproj.GenerateResource.Cache
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.GUII.Formlogin.resources
+D:\QLBH_Chauquoctoan\bin\Debug\QLBH_Chauquoctoan.exe
+D:\QLBH_Chauquoctoan\bin\Debug\QLBH_Chauquoctoan.pdb
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.exe
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.pdb
+D:\QLBH_Chauquoctoan\obj\Debug\QLBH_Chauquoctoan.GUII.gd.resources
