@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,36 @@ namespace QLBH_Chauquoctoan.DALL
             SqlConnection conn = new SqlConnection();
             conn.ConnectionString = @"Data Source= DESKTOP-RSMF0P1\MSSQLSERVER3 ;Initial Catalog= TaiKhoan; User Id=sa; Password=sa";
             return conn;
+        }
+
+        public string GetFieldValues(string sql)
+        {
+            string result = null;
+            using (SqlConnection connection = CreateConnection())
+            {
+                try
+                {
+                    connection.Open();
+                    using (SqlCommand command = new SqlCommand(sql, connection))
+                    {
+                        object queryResult = command.ExecuteScalar();
+                        if (queryResult != null)
+                        {
+                            result = queryResult.ToString();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Error: " + ex.Message);
+                }
+            }
+            return result;
+        }
+
+        internal DataTable GetDataTable(string str)
+        {
+            throw new NotImplementedException();
         }
     }
 }

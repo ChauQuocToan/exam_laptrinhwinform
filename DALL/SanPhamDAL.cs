@@ -14,7 +14,32 @@ namespace QLBH_Chauquoctoan.DALL
         {
             SqlConnection conn = CreateConnection();
             conn.Open();
-            SqlCommand cmd = new SqlCommand("select * from products ", conn);
+            SqlCommand cmd = new SqlCommand("select * from San_Pham_Ban_Hang ", conn);
+            SqlDataReader reader = cmd.ExecuteReader();
+                
+            List<SanPhamBEL> lstCus = new List<SanPhamBEL>();
+
+            while (reader.Read())
+            {
+                SanPhamBEL cus = new SanPhamBEL();
+                cus.id = int.Parse(reader["id"].ToString());
+                cus.name = reader["name"].ToString();
+                cus.price = int.Parse(reader["price"].ToString());
+                cus.quantity_in_stock = int.Parse(reader["quantity_in_stock"].ToString());
+                cus.Image = reader["Image"].ToString();
+                cus.KichCo = reader["KichCo"].ToString();
+
+                lstCus.Add(cus);
+            }
+            conn.Close();
+            return lstCus;
+        }
+        public List<SanPhamBEL> timkiem(SanPhamBEL c)
+        {
+            SqlConnection conn = CreateConnection();
+            conn.Open();
+            SqlCommand cmd = new SqlCommand("select * from San_Pham_Ban_Hang where name LIKE '%' + @name + '%' ", conn);
+            cmd.Parameters.Add(new SqlParameter("@name", c.name));
             SqlDataReader reader = cmd.ExecuteReader();
 
             List<SanPhamBEL> lstCus = new List<SanPhamBEL>();
@@ -22,12 +47,13 @@ namespace QLBH_Chauquoctoan.DALL
             while (reader.Read())
             {
                 SanPhamBEL cus = new SanPhamBEL();
-                cus.product_id = int.Parse(reader["product_id"].ToString());
+                cus.id = int.Parse(reader["id"].ToString());
                 cus.name = reader["name"].ToString();
                 cus.price = int.Parse(reader["price"].ToString());
                 cus.quantity_in_stock = int.Parse(reader["quantity_in_stock"].ToString());
                 cus.Image = reader["Image"].ToString();
-              
+                cus.KichCo = reader["KichCo"].ToString();
+
                 lstCus.Add(cus);
             }
             conn.Close();
@@ -37,9 +63,9 @@ namespace QLBH_Chauquoctoan.DALL
         {
             SqlConnection conn = CreateConnection();
             conn.Open();
-            SqlCommand cmd = new SqlCommand("update products set name=@name, price=@price, quantity_in_stock=@quantity_in_stock, Image=@Image WHERE product_id=@product_id", conn);
+            SqlCommand cmd = new SqlCommand("update San_Pham_Ban_Hang set name=@name, price=@price, quantity_in_stock=@quantity_in_stock, Image=@Image WHERE id=@id", conn);
 
-            cmd.Parameters.Add(new SqlParameter("@product_id", cus.product_id));
+            cmd.Parameters.Add(new SqlParameter("@id", cus.id));
             cmd.Parameters.Add(new SqlParameter("@name", cus.name));
             cmd.Parameters.Add(new SqlParameter("@price", cus.price));
             cmd.Parameters.Add(new SqlParameter("@quantity_in_stock", cus.quantity_in_stock));
@@ -54,8 +80,8 @@ namespace QLBH_Chauquoctoan.DALL
         {
             SqlConnection conn = CreateConnection();
             conn.Open();
-            SqlCommand cmd = new SqlCommand("delete from products where product_id=@product_id", conn);
-            cmd.Parameters.Add(new SqlParameter("@product_id", cus.product_id));
+            SqlCommand cmd = new SqlCommand("delete from San_Pham_Ban_Hang where id=@id", conn);
+            cmd.Parameters.Add(new SqlParameter("@id", cus.id));
             cmd.ExecuteNonQuery();
             conn.Close();
         }
@@ -63,13 +89,15 @@ namespace QLBH_Chauquoctoan.DALL
         {
             SqlConnection conn = CreateConnection();
             conn.Open();
-            SqlCommand cmd = new SqlCommand("insert into products values(@product_id,@name,@price,@quantity_in_stock,@Image)", conn);
-            cmd.Parameters.Add(new SqlParameter("@product_id", cus.product_id));
+            SqlCommand cmd = new SqlCommand("insert into San_Pham_Ban_Hang values(@id,@name,@price,@quantity_in_stock,@Image,@KichCo)", conn);
+            cmd.Parameters.Add(new SqlParameter("@id", cus.id));
             cmd.Parameters.Add(new SqlParameter("@name", cus.name));
             cmd.Parameters.Add(new SqlParameter("@price", cus.price));
             cmd.Parameters.Add(new SqlParameter("@quantity_in_stock", cus.quantity_in_stock));
             cmd.Parameters.Add(new SqlParameter("@Image", cus.Image));
-          // nút xuất dữ liệu
+            cmd.Parameters.Add(new SqlParameter("@KichCo", cus.KichCo));
+           
+            // nút xuất dữ liệu
             cmd.ExecuteNonQuery();
             conn.Close();
         }

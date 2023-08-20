@@ -16,6 +16,11 @@ namespace QLBH_Chauquoctoan.BALL
             List<SanPhamBEL> lstCus = dal.ReadSanPham();
             return lstCus;
         }
+        public List<SanPhamBEL> Timkiem(SanPhamBEL c)
+        {
+            List<SanPhamBEL> lstCus = dal.timkiem(c);
+            return lstCus;
+        }
 
         public void AddSanPham(SanPhamBEL cus)
         {

@@ -10,7 +10,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
+using ClosedXML.Excel;
+using System.Data.SqlClient;
+using DocumentFormat.OpenXml.Wordprocessing;
+using iTextSharp.text.pdf;
+using iTextSharp.text;
 
 namespace QLBH_Chauquoctoan.GUII
 {
@@ -37,8 +41,9 @@ namespace QLBH_Chauquoctoan.GUII
             txtGia.Text = string.Empty;
             tbSL.Text = string.Empty;
             nameimg = string.Empty;
-            //pictureBox.Image = null;
+            cbKC.SelectedIndex = -1; // Reset the selected index of the combo box
 
+            // ... (rest of the code)
         }
         private void CheckDataAvailability()
         {
@@ -70,12 +75,13 @@ namespace QLBH_Chauquoctoan.GUII
                     int price = Convert.ToInt32(selectedRow.Cells["colPrice"].Value);
                     int quantityInStock = Convert.ToInt32(selectedRow.Cells["colQuantityInStock"].Value);
                     string image = selectedRow.Cells["colImage"].Value.ToString();
-
+                    string KhuVuc = selectedRow.Cells["ColKC"].Value.ToString();
                     // Display the data in the input fields
                     tbMa.Text = productId.ToString();
                     tbName.Text = name;
                     txtGia.Text = price.ToString();
                     tbSL.Text = quantityInStock.ToString();
+                    cbKC.Text = KhuVuc;
                     if (image != null)
                     {
                         img = image;
@@ -112,55 +118,134 @@ namespace QLBH_Chauquoctoan.GUII
 
         private void btRead_Click(object sender, EventArgs e)
         {
-            List<SanPhamBEL> lstCus = cusBAL1.ReadSanPham();
-            foreach (SanPhamBEL cus in lstCus)
-            {
-                dgvsp.Rows.Add(cus.product_id, cus.name, cus.price, cus.quantity_in_stock, cus.Image);
+            //List<SanPhamBEL> lstCus = cusBAL1.ReadSanPham();
+            //foreach (SanPhamBEL cus in lstCus)
+            //{
+            //    dgvsp.Rows.Add(cus.id, cus.name, cus.price, cus.quantity_in_stock, cus.Image,cus.KichCo);
                 
-            }
+            //}
+
+            //// Reset input fields and combo box selection to their default values
+            //ResetInputFields();
         }
 
         private void btNew_Click(object sender, EventArgs e)
         {
-            // Check if all required fields are filled
+            //Check if all required fields are filled
             if (string.IsNullOrEmpty(tbMa.Text) || string.IsNullOrEmpty(tbName.Text) || string.IsNullOrEmpty(txtGia.Text) || string.IsNullOrEmpty(tbSL.Text) || string.IsNullOrEmpty(nameimg))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return; // Exit the method if any required field is missing
             }
+            // Reset input fields and combo box selection to their default values
 
-            // If all required fields are filled, proceed with adding the product
+            int ma;
+            if (!int.TryParse(tbMa.Text, out ma))
+            {
+                MessageBox.Show("Mã sản phẩm phải là số nguyên!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (IsProductIDAlreadyExists(ma))
+            {
+                MessageBox.Show("Mã sản phẩm đã tồn tại. Vui lòng nhập mã khác!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            int price;
+            if (!int.TryParse(txtGia.Text, out price))
+            {
+                MessageBox.Show("Giá sản phẩm phải là số nguyên!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            int quantity;
+            if (!int.TryParse(tbSL.Text, out quantity))
+            {
+                MessageBox.Show("Số lượng sản phẩm phải là số nguyên!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            string name = tbName.Text;
+            if (string.IsNullOrEmpty(name) || name.Length > 15 || !char.IsUpper(name[0]))
+            {
+                MessageBox.Show("Tên không hợp lệ! Tên sản phẩm phải bắt đầu bằng ký tự viết hoa và tối đa 15 ký tự.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // If all required fields are filled and data is valid, proceed with adding the product
             SanPhamBEL cus = new SanPhamBEL();
-            cus.product_id = int.Parse(tbMa.Text);
+            cus.id = ma;
             cus.name = tbName.Text;
-            cus.price = int.Parse(txtGia.Text);
-            cus.quantity_in_stock = int.Parse(tbSL.Text);
+            cus.price = price;
+            cus.quantity_in_stock = quantity;
             cus.Image = nameimg;
-            cusBAL1.AddSanPham(cus);
-            dgvsp.Rows.Add(cus.product_id, cus.name, cus.price, cus.quantity_in_stock, cus.Image);
-            MessageBox.Show("Sản phẩm đã được thêm thành công!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            cus.KichCo = cbKC.Text;
 
-            // Reset input fields to their default values
+            cusBAL1.AddSanPham(cus);
+            dgvsp.Rows.Add(cus.id, cus.name, cus.price, cus.quantity_in_stock, cus.Image, cus.KichCo);
+            MessageBox.Show("Sản phẩm đã được thêm thành công!", "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Reset input fields and combo box selection to their default values
             ResetInputFields();
         }
 
 
-        private void btDelete_Click(object sender, EventArgs e)
+        private bool IsProductIDAlreadyExists(int id)
         {
-
-            if (dgvsp.Rows.Count == 0)
+            foreach (DataGridViewRow row in dgvsp.Rows)
             {
-                MessageBox.Show("Không có dữ liệu để xóa!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                int existingID = Convert.ToInt32(row.Cells["colProductID"].Value);
+                if (existingID == id)
+                {
+                    return true; // ID already exists
+                }
+            }
+            return false;
+        }
+
+        private bool IsDataAlreadyExists(int id, string name, int price, int quantity, string kichco)
+        {
+            foreach (DataGridViewRow row in dgvsp.Rows)
+            {
+                int existingID = Convert.ToInt32(row.Cells["colProductID"].Value);
+                string existingName = row.Cells["colName"].Value.ToString();
+                int existingPrice = Convert.ToInt32(row.Cells["colPrice"].Value);
+                int existingQuantity = Convert.ToInt32(row.Cells["colQuantityInStock"].Value);
+                string existingKichCo = row.Cells["ColKC"].Value.ToString();
+
+                if (existingID == id && existingName == name && existingPrice == price && existingQuantity == quantity && existingKichCo == kichco)
+                {
+                    return true; // Data already exists
+                }
+            }
+            return false;
+
+        }
+
+
+
+
+       
+        
+            private void btDelete_Click(object sender, EventArgs e)
+            {
+
+            if (dgvsp.SelectedRows.Count == 0 || dgvsp.SelectedRows[0].IsNewRow)
+            {
+                MessageBox.Show("Vui lòng chọn nhà cung cấp để xóa!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             SanPhamBEL cus = new SanPhamBEL();
-            cus.product_id = int.Parse(tbMa.Text);
-            cusBAL1.DeleteSanPham(cus);
-            int idx = dgvsp.CurrentCell.RowIndex;
-            dgvsp.Rows.RemoveAt(idx);
-            MessageBox.Show("Sản phẩm đã được xóa thành công!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-        }
+                cus.id = int.Parse(tbMa.Text);
+                cusBAL1.DeleteSanPham(cus);
+                int idx = dgvsp.CurrentCell.RowIndex;
+                dgvsp.Rows.RemoveAt(idx);
+                MessageBox.Show("Sản phẩm đã được xóa thành công!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Reset input fields and combo box selection to their default values
+                ResetInputFields();
+            }
+        
 
 
 
@@ -170,31 +255,60 @@ namespace QLBH_Chauquoctoan.GUII
 
         private void btEdit_Click(object sender, EventArgs e)
         {
+            // Check if any row is selected for editing
+            if (dgvsp.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn sản phẩm để sửa!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            DataGridViewRow selectedRow = dgvsp.SelectedRows[0]; // Get the first selected row
+
+            // Extract data from the selected row
+            int productId = Convert.ToInt32(selectedRow.Cells["colProductID"].Value);
+            string currentImage = selectedRow.Cells["colImage"].Value.ToString();
+
+            // Check if the ID field has been modified
+            if (productId != int.Parse(tbMa.Text))
+            {
+                MessageBox.Show("Không thể thay đổi ID của sản phẩm!", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
             // Create a new SanPhamBEL object with the updated data
             SanPhamBEL cus = new SanPhamBEL();
-            cus.product_id = int.Parse(tbMa.Text);
+            cus.id = productId; // Use the current ID
             cus.name = tbName.Text;
             cus.price = int.Parse(txtGia.Text);
             cus.quantity_in_stock = int.Parse(tbSL.Text);
-            cus.Image = nameimg;
+            cus.KichCo = cbKC.Text;
+            if (!string.IsNullOrEmpty(nameimg))
+            {
+                cus.Image = nameimg; // Use the new image if selected
+            }
+            else
+            {
+                cus.Image = currentImage; // Use the current image if no new image selected
+            }
 
             // Call the EditSanPham method to update the database
             cusBAL1.EditSanPham(cus);
-
+     
             // Get the index of the currently selected row in the DataGridView
-            int rowIndex = dgvsp.CurrentCell.RowIndex;
+            int rowIndex = selectedRow.Index;
 
             // Update the row in the DataGridView with the edited data
-            dgvsp.Rows[rowIndex].Cells["colProductID"].Value = cus.product_id;
             dgvsp.Rows[rowIndex].Cells["colName"].Value = cus.name;
             dgvsp.Rows[rowIndex].Cells["colPrice"].Value = cus.price;
             dgvsp.Rows[rowIndex].Cells["colQuantityInStock"].Value = cus.quantity_in_stock;
-            dgvsp.Rows[rowIndex].Cells["colImage"].Value = nameimg;
+            dgvsp.Rows[rowIndex].Cells["colImage"].Value = cus.Image; // Update the image column
+            dgvsp.Rows[rowIndex].Cells["colKC"].Value = cus.KichCo;
             MessageBox.Show("Sản Phâm đã được cập nhật!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             // Reset input fields to their default values
             ResetInputFields();
         }
+
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
@@ -205,39 +319,48 @@ namespace QLBH_Chauquoctoan.GUII
         {
             OpenFileDialog openFileDialog = new OpenFileDialog();
             openFileDialog.Filter = "Image Files (*.jpg, *.png, *.bmp)|*.jpg;*.png;*.bmp|All files (*.*)|*.*";
-            openFileDialog.Multiselect = false; // Chỉ cho phép chọn một tệp tin
+            openFileDialog.Multiselect = false;
 
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                // Lấy đường dẫn của hình ảnh đã chọn
-                string imagePath = openFileDialog.FileName;
                 string selectedImagePath = openFileDialog.FileName;
 
-                // Lưu ảnh vào thư mục chỉ định
-                string targetDirectory = @"D:\chauquoctoan_2121110360\img\"; // Thay đổi đường dẫn tới thư mục mong muốn
+                // Get the file size in bytes
+                long fileSize = new FileInfo(selectedImagePath).Length;
+
+                // Check if the file size exceeds the limit (3.87 KB)
+                if (fileSize > 3870)
+                {
+                    MessageBox.Show("Vui lòng chọn một ảnh có dung lượng dưới 3.87 KB.", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                string targetDirectory = @"D:\chauquoctoan_2121110360\img\";
                 string targetFileName = Path.Combine(targetDirectory, Path.GetFileName(selectedImagePath));
 
                 nameimg = Path.GetFileName(selectedImagePath);
 
-
                 File.Copy(selectedImagePath, targetFileName, true);
-                // Load ảnh từ đường dẫn và thêm vào DataGridViewImageColumn
 
                 pictureBox.Image = new Bitmap(openFileDialog.FileName);
                 pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
                 pb.Image = new Bitmap(openFileDialog.FileName);
             }
-
         }
+
 
         private void btExit_Click(object sender, EventArgs e)
         {
-
+            DialogResult result = MessageBox.Show("Bạn có muốn thoát khỏi ứng dụng?", "Xác nhận",
+               MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (result == DialogResult.Yes)
+            {
+                this.Close();
+            }
         }
 
         private void dgvsp_CellContentClick_1(object sender, DataGridViewCellEventArgs e)
         {
-
             // Check if a valid row (not a header row) is clicked
             if (e.RowIndex >= 0)
             {
@@ -250,12 +373,15 @@ namespace QLBH_Chauquoctoan.GUII
                 int price = Convert.ToInt32(selectedRow.Cells["colPrice"].Value);
                 int quantityInStock = Convert.ToInt32(selectedRow.Cells["colQuantityInStock"].Value);
                 string Image = selectedRow.Cells["colImage"].Value.ToString();
+                string KhuVuc = selectedRow.Cells["ColKC"].Value.ToString(); // Correct column name
 
                 // Display the data in the input fields
                 tbMa.Text = productId.ToString();
                 tbName.Text = name;
                 txtGia.Text = price.ToString();
                 tbSL.Text = quantityInStock.ToString();
+                cbKC.Text = KhuVuc; // Set the text property of the combo box to the Kích Cỡ (KhuVuc)
+
                 if (Image != null)
                 {
                     img = selectedRow.Cells["colImage"].Value.ToString();
@@ -263,7 +389,6 @@ namespace QLBH_Chauquoctoan.GUII
 
                 if (File.Exists(@"D:\chauquoctoan_2121110360\img\" + img))
                 {
-
                     // Hiển thị hình ảnh trong PictureBox
                     pictureBox.Image = new Bitmap(@"D:\chauquoctoan_2121110360\img\" + img);
                     pictureBox.SizeMode = PictureBoxSizeMode.Zoom;
@@ -272,15 +397,148 @@ namespace QLBH_Chauquoctoan.GUII
                 {
                     pictureBox.Image = null;
                 }
-
-
-
             }
         }
+
 
         private void cbArea_SelectedIndexChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void tbMa_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void gd_Load(object sender, EventArgs e)
+        {
+            List<SanPhamBEL> lstCus = cusBAL1.ReadSanPham();
+            foreach (SanPhamBEL cus in lstCus)
+            {
+                dgvsp.Rows.Add(cus.id, cus.name, cus.price, cus.quantity_in_stock, cus.Image, cus.KichCo);
+
+            }
+
+            // Reset input fields and combo box selection to their default values
+            ResetInputFields();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add("Sheet1");
+
+                    // Export column headers (field names)
+                    for (int colIndex = 0; colIndex < dgvsp.Columns.Count; colIndex++)
+                    {
+                        string columnName = dgvsp.Columns[colIndex].HeaderText;
+                        worksheet.Cell(1, colIndex + 1).Value = columnName; // First row is for headers
+                    }
+
+                    // Loop through the DataGridView rows and columns to export the data
+                    for (int rowIndex = 0; rowIndex < dgvsp.Rows.Count; rowIndex++)
+                    {
+                        for (int colIndex = 0; colIndex < dgvsp.Columns.Count; colIndex++)
+                        {
+                            // Excel uses 1-based indexing for rows and columns
+                            // So we add 1 to rowIndex and colIndex to get the correct cell in Excel
+                            object cellValue = dgvsp.Rows[rowIndex].Cells[colIndex].Value;
+                            string cellStringValue = cellValue != null ? cellValue.ToString() : "";
+                            worksheet.Cell(rowIndex + 2, colIndex + 1).Value = cellStringValue; // Start from row 2 for data
+                        }
+                    }
+
+                    // Save the Excel file
+                    SaveFileDialog saveFileDialog = new SaveFileDialog
+                    {
+                        Filter = "Excel Files|*.xlsx",
+                        Title = "Save Excel File",
+                        FileName = "ExportedData.xlsx"
+                    };
+
+                    if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                    {
+                        workbook.SaveAs(saveFileDialog.FileName);
+                        MessageBox.Show("Xuất dữ liệu thành công!");
+                    }
+                }
+            }
+            catch
+            {
+                MessageBox.Show("Có lỗi sảy ra. Thử lại");
+            }
+        }
+
+        private void txtTK_TextChanged(object sender, EventArgs e)
+        {
+            dgvsp.Rows.Clear();
+            SanPhamBEL cus = new SanPhamBEL();
+            cus.name = txtTK.Text;
+            List<SanPhamBEL> lstCus = cusBAL1.Timkiem(cus);
+            foreach (SanPhamBEL c in lstCus)
+            {
+                dgvsp.Rows.Add(c.id,c.name,c.price,c.quantity_in_stock,c.Image,c.KichCo);
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            // Tạo tệp PDF
+            SaveFileDialog saveDialog = new SaveFileDialog();
+            saveDialog.Filter = "PDF file (*.pdf)|*.pdf";
+            if (saveDialog.ShowDialog() == DialogResult.OK)
+            {
+                iTextSharp.text.Document document = new iTextSharp.text.Document();
+                PdfWriter writer = PdfWriter.GetInstance(document, new FileStream(saveDialog.FileName, FileMode.Create));
+                document.Open();
+
+                PdfPTable pdfTable = new PdfPTable(dgvsp.Columns.Count);
+                for (int j = 0; j < dgvsp.Columns.Count; j++)
+                {
+                    pdfTable.AddCell(new Phrase(dgvsp.Columns[j].HeaderText));
+                }
+                pdfTable.HeaderRows = 1;
+
+                for (int i = 0; i < dgvsp.Rows.Count; i++)
+                {
+                    for (int k = 0; k < dgvsp.Columns.Count; k++)
+                    {
+                        if (dgvsp[k, i].Value != null)
+                        {
+                            pdfTable.AddCell(new Phrase(dgvsp[k, i].Value.ToString()));
+                        }
+                    }
+                }
+
+                document.Add(pdfTable);
+                document.Close();
+            }
+        }
+        private void PDF_Click(object sender, EventArgs e)
+        {
+            ExportToPDF(dgvsp);
+        }
+
+        private void ExportToPDF(DataGridView dgvsp)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            List<SanPhamBEL> lstCus = cusBAL1.ReadSanPham();
+            foreach (SanPhamBEL cus in lstCus)
+            {
+                dataGridView1.Rows.Add(cus.id, cus.name, cus.price, cus.quantity_in_stock, cus.Image, cus.KichCo);
+
+            }
+
+            // Reset input fields and combo box selection to their default values
+            ResetInputFields();
         }
     }
     }

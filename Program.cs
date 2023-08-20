@@ -17,7 +17,7 @@ namespace QLBH_Chauquoctoan
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new gd());
+            Application.Run(new Formlogin());
         }
     }
 }
